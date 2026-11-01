@@ -449,9 +449,10 @@ Public Class FormMain
             End Try
             '上报
             Telemetry("启动")
-            '开源版本提示
-            If VersionBranchMain = "OpenSource" Then
-                MyMsgBox($"本版本为 PCL-II 分支，已修复以下官方开源版不可用的特性：{vbCrLf}- CurseForge API 调用：已配置 API Key，可正常使用{vbCrLf}- 正版登录：已内置微软登录 Client ID，可正常登录{vbCrLf}其余开源版限制如下：{vbCrLf}- 更新与联网通知：避免滥用隐患{vbCrLf}- 主题切换：这是需要赞助解锁的纪念性质的功能，别让赞助者太伤心啦……{vbCrLf}- 百宝箱：开发早期往里面塞了些开发工具，整理起来太麻烦了……", "开源版本说明")
+            '开源版本提示（PCL-II 分支：仅首次启动显示一次）
+            If VersionBranchMain = "OpenSource" AndAlso Not Settings.Get(Of Boolean)("SystemOpenSourceHintShown") Then
+                Settings.Set("SystemOpenSourceHintShown", True)
+                MyMsgBox($"本版本为 PCL-II 分支，已修复以下官方开源版不可用的特性：{vbCrLf}- CurseForge API 调用：已配置 API Key，可正常使用{vbCrLf}- 正版登录：已内置微软登录 Client ID，可正常登录{vbCrLf}- 主题切换：已解锁全部隐藏主题与自定义配色{vbCrLf}其余开源版限制如下：{vbCrLf}- 联网通知：避免滥用隐患{vbCrLf}- 百宝箱：开发早期往里面塞了些开发工具，整理起来太麻烦了……", "开源版本说明")
             End If
         End Sub, "初始化", ThreadPriority.Lowest)
 
