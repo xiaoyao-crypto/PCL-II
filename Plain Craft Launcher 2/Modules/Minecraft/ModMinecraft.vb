@@ -76,7 +76,8 @@ Public Module ModMinecraft
 
             '扫描官启文件夹
             Dim MojangPath As String = Paths.AppData & ".minecraft\"
-            If (Not CacheMcFolderList.Any OrElse Not PathUtils.IsSame(MojangPath, CacheMcFolderList(0).Location)) AndAlso '当前文件夹不是官启文件夹
+            If Not Paths.PortableMode AndAlso 'PCL-II 分支：便携模式下不扫描、不写入官方启动器文件夹（%AppData%\.minecraft）
+                (Not CacheMcFolderList.Any OrElse Not PathUtils.IsSame(MojangPath, CacheMcFolderList(0).Location)) AndAlso '当前文件夹不是官启文件夹
                 DirectoryUtils.Exists(MojangPath & "versions\") Then '具有权限且存在 versions 文件夹
                 CacheMcFolderList.Add(New McFolder With {.Name = "官方启动器文件夹", .Location = MojangPath, .Type = McFolder.Types.Vanilla})
             End If
