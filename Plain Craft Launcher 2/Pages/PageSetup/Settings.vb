@@ -264,7 +264,16 @@ Public Class Settings
                     WriteIni("Setup", Key, Value)
                 Case Sources.Registry
                     Try
-                        RegistryUtils.Write($"HKEY_CURRENT_USER\Software\{RegFolder}", Key, Value)
+                        If Key = "SystemPortableMode" Then
+                            'PCL-II 分支：功能模式开关双写（注册表 + 便携文件），保证切换与 U 盘携带均正确
+                            RegistryUtils.Write($"HKEY_CURRENT_USER\Software\{RegFolder}", Key, Value)
+                            PortableSettingsWrite(Key, Value)
+                        ElseIf Paths.PortableMode Then
+                            'PCL-II 分支：便携模式下写入程序目录 Settings.json
+                            PortableSettingsWrite(Key, Value)
+                        Else
+                            RegistryUtils.Write($"HKEY_CURRENT_USER\Software\{RegFolder}", Key, Value)
+                        End If
                     Catch ex As Exception
                         Logger.Warn(ex, $"写入注册表失败（{Key} → {Value}）", LogBehavior.Toast)
                     End Try
@@ -333,7 +342,8 @@ Public Class Settings
                 Case Sources.Normal
                     GotValue = ReadIni("Setup", Key, DefaultValue)
                 Case Sources.Registry
-                    GotValue = RegistryUtils.TryRead($"HKEY_CURRENT_USER\Software\{RegFolder}", Key, DefaultValue)
+                    'PCL-II 分支：便携模式下注册表源设置改存程序目录 Settings.json
+                    GotValue = If(Paths.PortableMode, PortableSettingsRead(Key, DefaultValue), RegistryUtils.TryRead($"HKEY_CURRENT_USER\Software\{RegFolder}", Key, DefaultValue))
                 Case Sources.Instance
                     If Instance Is Nothing Then
                         Throw New Exception($"读取版本设置 {Key} 时未提供目标版本")
@@ -393,7 +403,15 @@ Public Class Settings
                     DeleteIniKey("Setup", Key)
                 Case Sources.Registry
                     Try
-                        RegistryUtils.Delete($"HKEY_CURRENT_USER\Software\{RegFolder}", Key)
+                        If Key = "SystemPortableMode" Then
+                            'PCL-II 分支：功能模式开关双删（注册表 + 便携文件）
+                            RegistryUtils.Delete($"HKEY_CURRENT_USER\Software\{RegFolder}", Key)
+                            PortableSettingsDelete(Key)
+                        ElseIf Paths.PortableMode Then
+                            PortableSettingsDelete(Key)
+                        Else
+                            RegistryUtils.Delete($"HKEY_CURRENT_USER\Software\{RegFolder}", Key)
+                        End If
                     Catch ex As Exception
                         Logger.Warn(ex, $"删除注册表失败（{Key}）", LogBehavior.Toast)
                     End Try
@@ -425,7 +443,12 @@ Public Class Settings
                 Return HasIniKey("Setup", Key)
             Case Sources.Registry
                 Try
-                    Return RegistryUtils.Has($"HKEY_CURRENT_USER\Software\{RegFolder}", Key)
+                    'PCL-II 分支：便携模式下查询程序目录 Settings.json
+                    If Paths.PortableMode Then
+                        Return PortableSettingsHas(Key)
+                    Else
+                        Return RegistryUtils.Has($"HKEY_CURRENT_USER\Software\{RegFolder}", Key)
+                    End If
                 Catch ex As Exception
                     Logger.Warn(ex, $"判断注册表 {Key} 是否存在时出错")
                     Return False
@@ -435,6 +458,89 @@ Public Class Settings
                 Return HasIniKey(Instance.PathVersion & "PCL\Setup.ini", Key)
         End Select
     End Function
+
+#Region "PCL-II 便携模式设置存储"
+
+    ''' <summary>
+    ''' PCL-II 分支：便携模式下，注册表源设置改存于程序目录 PCL\Data\Settings.json，
+    ''' 随文件夹整体移动（U 盘携带、拷贝到其他电脑均有效）。
+    ''' 非便携模式下仍使用注册表，行为与官方一致。
+    ''' </summary>
+    Private Shared ReadOnly PortableSettingsLock As New Object
+    Private Shared Function PortableSettingsPath() As String
+        Return Paths.AppDataThenName & "Settings.json"
+    End Function
+    Private Shared Function PortableSettingsReadAll() As Dictionary(Of String, String)
+        Try
+            Dim Path As String = PortableSettingsPath()
+            If Not FileUtils.Exists(Path) Then Return New Dictionary(Of String, String)
+            Return JsonConvert.DeserializeObject(Of Dictionary(Of String, String))(System.IO.File.ReadAllText(Path, Text.Encoding.UTF8))
+        Catch ex As Exception
+            Logger.Warn(ex, "读取便携设置文件失败")
+            Return New Dictionary(Of String, String)
+        End Try
+    End Function
+    Private Shared Function PortableSettingsRead(Key As String, DefaultValue As String) As String
+        SyncLock PortableSettingsLock
+            Dim Value As String = Nothing
+            If PortableSettingsReadAll().TryGetValue(Key, Value) Then Return Value
+            Return DefaultValue
+        End SyncLock
+    End Function
+    Private Shared Sub PortableSettingsWrite(Key As String, Value As String)
+        SyncLock PortableSettingsLock
+            Dim dict = PortableSettingsReadAll()
+            If dict.ContainsKey(Key) Then dict(Key) = Value Else dict.Add(Key, Value)
+            Try
+                Dim Path As String = PortableSettingsPath()
+                Dim Dir As String = System.IO.Path.GetDirectoryName(Path)
+                If Not String.IsNullOrEmpty(Dir) Then DirectoryUtils.Create(Dir)
+                System.IO.File.WriteAllText(Path, JsonConvert.SerializeObject(dict, Formatting.Indented), Text.Encoding.UTF8)
+            Catch ex As Exception
+                Logger.Warn(ex, $"写入便携设置失败（{Key}）")
+            End Try
+        End SyncLock
+    End Sub
+    Private Shared Sub PortableSettingsDelete(Key As String)
+        SyncLock PortableSettingsLock
+            Dim dict = PortableSettingsReadAll()
+            If dict.Remove(Key) Then
+                Try
+                    Dim Path As String = PortableSettingsPath()
+                    System.IO.File.WriteAllText(Path, JsonConvert.SerializeObject(dict, Formatting.Indented), Text.Encoding.UTF8)
+                Catch ex As Exception
+                    Logger.Warn(ex, $"删除便携设置失败（{Key}）")
+                End Try
+            End If
+        End SyncLock
+    End Sub
+    Private Shared Function PortableSettingsHas(Key As String) As Boolean
+        SyncLock PortableSettingsLock
+            Return PortableSettingsReadAll().ContainsKey(Key)
+        End SyncLock
+    End Function
+    ''' <summary>
+    ''' PCL-II 分支：功能模式标记读取——优先读程序目录便携文件（U 盘携带时注册表不可用），否则读注册表。
+    ''' </summary>
+    Public Shared Function GetPortableModeFlag() As Integer
+        Try
+            Dim Path As String = Paths.Base & "PCL\Data\Settings.json"
+            If FileUtils.Exists(Path) Then
+                Dim dict = JsonConvert.DeserializeObject(Of Dictionary(Of String, String))(System.IO.File.ReadAllText(Path, Text.Encoding.UTF8))
+                Dim Value As String = Nothing
+                If dict IsNot Nothing AndAlso dict.TryGetValue("SystemPortableMode", Value) Then Return CInt(Value)
+            End If
+        Catch ex As Exception
+            Logger.Warn(ex, "读取便携模式标记失败")
+        End Try
+        Try
+            Return CInt(RegistryUtils.TryRead($"HKEY_CURRENT_USER\Software\{RegFolder}", "SystemPortableMode", "0"))
+        Catch ex As Exception
+            Return 0
+        End Try
+    End Function
+
+#End Region
 
 #Region "DES 加密"
 
