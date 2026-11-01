@@ -1448,7 +1448,7 @@ FinishExCatch:
                     If Not FilesToCheck.Any Then Return
                     '获取 MC 文件夹列表
                     Dim Folders As New List(Of String)
-                    Folders.Add(Paths.AppData & ".minecraft\") '总是添加官启文件夹，因为 HMCL 会把所有文件存在这里
+                    If Not Paths.PortableMode Then Folders.Add(Paths.AppData & ".minecraft\") '总是添加官启文件夹，因为 HMCL 会把所有文件存在这里；PCL-II 分支：便携模式下跳过
                     Folders.AddRange(McFolderList.Select(Function(f) f.Location))
                     Folders = Folders.Distinct.Where(Function(f) DirectoryUtils.Exists(f)).ToList
                     '平均分配到多个检查线程
