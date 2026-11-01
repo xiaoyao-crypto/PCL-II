@@ -9,6 +9,20 @@ Public Class Application
             '核心初始化
             MeloongCore.Main.Init("PCL")
             MeloongCore.Wpf.Main.Init()
+            'PCL-II 分支：读取功能模式（默认模式 / 便携模式），便携模式下所有数据保存在程序目录
+            Try
+                Paths.PortableMode = Settings.Get(Of Integer)("SystemPortableMode") = 1
+            Catch ex As Exception
+                Logger.Warn(ex, "读取功能模式设置失败")
+            End Try
+            'PCL-II 分支：便携模式且未自定义缓存路径时，缓存文件夹改为程序目录（需在读取 PathTemp 前显式覆盖）
+            If Paths.PortableMode Then
+                Try
+                    If Settings.Get(Of String)("SystemSystemCache") = "" Then PathTemp = PathUtils.AddSlashSuffix(Paths.Base & "PCL\Cache\")
+                Catch ex As Exception
+                    Logger.Warn(ex, "设置便携模式缓存文件夹失败")
+                End Try
+            End If
             If Not (e.Args.Contains("--update") OrElse e.Args.Contains("--gpu") OrElse e.Args.Contains("--memory")) Then '若是通过命令行调用，则不检查单例、不轮换日志（#9137）
                 WaitingMutex(e)
                 Logger.Instance = New PclLogger With {.logFolder = Paths.BaseThenName, .MinLevel = If(ModeDebug, LogLevel.Trace, LogLevel.Info)}
