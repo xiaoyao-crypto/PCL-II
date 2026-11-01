@@ -27,10 +27,20 @@
                             <RowDefinition Height="28" />
                             <RowDefinition Height="9" />
                             <RowDefinition Height="28" />
+                            <RowDefinition Height="9" />
+                            <RowDefinition Height="28" />
                         </Grid.RowDefinitions>
-                        <TextBlock Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Left" Text="默认版本隔离" Margin="0,0,25,0" />
-                        <local:MyComboBox local:SettingService.Key="LaunchArgumentIndieV2" x:Name="ComboArgumentIndieV2"
+                        <TextBlock Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Left" Text="功能模式" Margin="0,0,25,0"
+                                   ToolTip="PCL-II 分支新增功能。&#xa;默认模式：数据存放于系统 AppData 目录。&#xa;便携模式：所有数据（设置、版本、缓存、皮肤等）均保存在 PCL 所在文件夹，不写入 AppData，可随文件夹整体移动。" />
+                        <local:MyComboBox local:SettingService.Key="SystemPortableMode" x:Name="ComboPortableMode"
                                           Grid.Row="0" Grid.ColumnSpan="2" Grid.Column="1"
+                                          ToolTip="PCL-II 分支新增功能。&#xa;默认模式：数据存放于系统 AppData 目录。&#xa;便携模式：所有数据均保存在 PCL 所在文件夹，不写入 AppData，可随文件夹整体移动。&#xa;切换后需重启 PCL 生效，数据不会自动迁移。">
+                            <local:MyComboBoxItem Content="默认模式" />
+                            <local:MyComboBoxItem Content="便携模式" />
+                        </local:MyComboBox>
+                        <TextBlock Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Left" Text="默认版本隔离" Margin="0,0,25,0" />
+                        <local:MyComboBox local:SettingService.Key="LaunchArgumentIndieV2" x:Name="ComboArgumentIndieV2"
+                                          Grid.Row="2" Grid.ColumnSpan="2" Grid.Column="1"
                                           ToolTip="当安装新版本时，据此自动设置新版本的隔离选项。&#xa;若想调整已有版本的隔离策略，请前往它的版本设置。">
                             <local:MyComboBoxItem Content="关闭" 
                                                   ToolTip="所有版本均使用同一档案，存档、Mod、资源包等均为公用。&#xa;若存在多个安装了 Mod 的版本，可能会导致 Mod 冲突。" />
@@ -43,12 +53,12 @@
                             <local:MyComboBoxItem Content="隔离所有版本" 
                                                   ToolTip="不同版本之间的存档、Mod、资源包等均不互通。&#xa;这会导致不同原版版本间的存档不能共用，所以一般不推荐。" />
                         </local:MyComboBox>
-                        <TextBlock Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Left" Text="游戏窗口标题" Margin="0,0,25,0" />
+                        <TextBlock Grid.Row="4" VerticalAlignment="Center" HorizontalAlignment="Left" Text="游戏窗口标题" Margin="0,0,25,0" />
                         <local:MyTextBox local:SettingService.Key="LaunchArgumentTitle" 
-                                         Grid.Row="2" Grid.ColumnSpan="2" Grid.Column="1" ToolTip="自定义游戏窗口的标题，若留空则不进行更改。&#xa;你可以用替换标记来动态改变其内容，在 更多 → 帮助 中搜索 “替换标记” 以了解用法。" HintText="默认" MaxLength="100" />
-                        <TextBlock Grid.Row="4" VerticalAlignment="Center" HorizontalAlignment="Left" Text="自定义信息" Margin="0,0,25,0" />
+                                         Grid.Row="4" Grid.ColumnSpan="2" Grid.Column="1" ToolTip="自定义游戏窗口的标题，若留空则不进行更改。&#xa;你可以用替换标记来动态改变其内容，在 更多 → 帮助 中搜索 “替换标记” 以了解用法。" HintText="默认" MaxLength="100" />
+                        <TextBlock Grid.Row="6" VerticalAlignment="Center" HorizontalAlignment="Left" Text="自定义信息" Margin="0,0,25,0" />
                         <local:MyTextBox local:SettingService.Key="LaunchArgumentInfo" 
-                                         Grid.Row="4" Grid.ColumnSpan="2" Text="PCL" Grid.Column="1" ToolTip="注意：Mojang 于 Minecraft 26.1 移除了该设置，因此该设置在新版本中无效。&#xa;&#xa;该信息会显示在游戏主界面的左下角，与 F3 调试页面的左上角。&#xa;你可以用替换标记来动态改变其内容，在 更多 → 帮助 中搜索 “替换标记” 以了解用法。">
+                                         Grid.Row="6" Grid.ColumnSpan="2" Text="PCL" Grid.Column="1" ToolTip="注意：Mojang 于 Minecraft 26.1 移除了该设置，因此该设置在新版本中无效。&#xa;&#xa;该信息会显示在游戏主界面的左下角，与 F3 调试页面的左上角。&#xa;你可以用替换标记来动态改变其内容，在 更多 → 帮助 中搜索 “替换标记” 以了解用法。">
                             <local:MyTextBox.ValidateRules>
                                 <local:ValidateExcept>
                                     <local:ValidateExcept.Excepts>
@@ -59,23 +69,23 @@
                                 </local:ValidateExcept>
                             </local:MyTextBox.ValidateRules>
                         </local:MyTextBox>
-                        <TextBlock VerticalAlignment="Center" Grid.Row="6" HorizontalAlignment="Left" Text="启动器可见性" Margin="0,0,25,0" />
+                        <TextBlock VerticalAlignment="Center" Grid.Row="8" HorizontalAlignment="Left" Text="启动器可见性" Margin="0,0,25,0" />
                         <local:MyComboBox local:SettingService.Key="LaunchArgumentVisible" 
-                                          x:Name="ComboArgumentVisibie" Grid.Row="6" Grid.ColumnSpan="2" Grid.Column="1">
+                                          x:Name="ComboArgumentVisibie" Grid.Row="8" Grid.ColumnSpan="2" Grid.Column="1">
                             <local:MyComboBoxItem Content="游戏启动后立即关闭" />
                             <local:MyComboBoxItem Content="游戏启动后隐藏，游戏退出后自动关闭" local:SettingService.Value="2" />
                             <local:MyComboBoxItem Content="游戏启动后隐藏，游戏退出后重新打开" local:SettingService.Value="3" />
                             <local:MyComboBoxItem Content="游戏启动后最小化" local:SettingService.Value="4" />
                             <local:MyComboBoxItem Content="游戏启动后仍保持不变" local:SettingService.Value="5" />
                         </local:MyComboBox>
-                        <TextBlock VerticalAlignment="Center" Grid.Row="8" HorizontalAlignment="Left" Text="进程优先级" Margin="0,0,25,0" />
-                        <local:MyComboBox local:SettingService.Key="LaunchArgumentPriority" Grid.Row="8" Grid.ColumnSpan="2" Grid.Column="1">
+                        <TextBlock VerticalAlignment="Center" Grid.Row="10" HorizontalAlignment="Left" Text="进程优先级" Margin="0,0,25,0" />
+                        <local:MyComboBox local:SettingService.Key="LaunchArgumentPriority" Grid.Row="10" Grid.ColumnSpan="2" Grid.Column="1">
                             <local:MyComboBoxItem Content="高（优先保证游戏运行，游戏性能更佳，但可能造成其他程序卡顿）" />
                             <local:MyComboBoxItem Content="中（平衡）" />
                             <local:MyComboBoxItem Content="低（优先保证其他程序运行，但可能让游戏卡顿，适合挂机时使用）" />
                         </local:MyComboBox>
-                        <TextBlock VerticalAlignment="Center" Grid.Row="10" HorizontalAlignment="Left" Text="窗口大小" Margin="0,0,25,0" />
-                        <Grid x:Name="PanArgumentWindow" Grid.Row="10" Grid.ColumnSpan="2" Grid.Column="1">
+                        <TextBlock VerticalAlignment="Center" Grid.Row="12" HorizontalAlignment="Left" Text="窗口大小" Margin="0,0,25,0" />
+                        <Grid x:Name="PanArgumentWindow" Grid.Row="12" Grid.ColumnSpan="2" Grid.Column="1">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition />
                                 <ColumnDefinition Width="Auto" />
