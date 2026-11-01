@@ -47,7 +47,7 @@ Public Module ModBase
     ''' <summary>
     ''' 程序的缓存文件夹路径，以 \ 结尾。
     ''' </summary>
-    Public PathTemp As String = PathUtils.AddSlashSuffix(If(Settings.Get(Of String)("SystemSystemCache") = "", Path.GetTempPath() & "PCL\", Settings.Get(Of String)("SystemSystemCache")).Replace("/", "\"))
+    Public PathTemp As String = PathUtils.AddSlashSuffix(If(Settings.Get(Of String)("SystemSystemCache") = "", If(Paths.PortableMode, Paths.Base & "PCL\Cache\", Path.GetTempPath() & "PCL\"), Settings.Get(Of String)("SystemSystemCache")).Replace("/", "\")) 'PCL-II 分支：便携模式下缓存文件夹保存于程序目录
     ''' <summary>
     ''' 当前程序的语言。
     ''' </summary>
