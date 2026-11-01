@@ -1,5 +1,7 @@
 '由于包含加解密等安全信息，本文件中的部分代码已被删除
 
+Imports System.Linq
+
 Friend Module ModSecret
 
     '标注 PCL 的不同分支，仅用于替换标记
@@ -146,14 +148,122 @@ Friend Module ModSecret
 
 #Region "更新"
 
+    'PCL-II 分支：更新源为 xiaoyao-crypto/PCL-II 的 GitHub Release
+    Private Const UpdateRepoOwner As String = "xiaoyao-crypto"
+    Private Const UpdateRepoName As String = "PCL-II"
+    Private UpdateNewExePath As String = ""
+    Friend IsUpdateWaitingRestart As Boolean = False
+
     Friend Sub UpdateCheckByButton()
-        Hint("该版本中不包含更新功能……")
+        Hint("正在检查更新……")
+        Try
+            '获取最新 Release 信息
+            Dim ReleaseJson = NetRequestByLoader($"https://api.github.com/repos/{UpdateRepoOwner}/{UpdateRepoName}/releases/latest", Timeout:=20000, IsJson:=True, SimulateBrowserHeaders:=True)
+            Dim Release = JObject.Parse(ReleaseJson)
+            Dim TagName = Release("tag_name").ToString()
+            '获取该 Release 对应提交
+            Dim CommitJson = NetRequestByLoader($"https://api.github.com/repos/{UpdateRepoOwner}/{UpdateRepoName}/commits/{System.Uri.EscapeDataString(TagName)}", Timeout:=20000, IsJson:=True, SimulateBrowserHeaders:=True)
+            Dim RemoteCommit = JObject.Parse(CommitJson)("sha").ToString()
+            '与当前版本比较（本地 CommitHash 由构建时注入）
+            If RemoteCommit.ToLowerInvariant() = CommitHash.ToLowerInvariant() Then
+                MyMsgBox("当前已是最新版本（" & TagName & "）。", "检查更新")
+                Return
+            End If
+            '查找 exe 资产
+            Dim Assets = Release("assets").ToObject(Of List(Of JObject))()
+            Dim ExeAsset = Assets.FirstOrDefault(Function(a) a("name").ToString().ToLowerInvariant().EndsWith(".exe"))
+            If ExeAsset Is Nothing Then
+                MyMsgBox("发现新版本 " & TagName & "，但该版本未附带可自动更新的程序文件（exe）。" & vbCrLf & "请到 GitHub Releases 页面手动下载：https://github.com/" & UpdateRepoOwner & "/" & UpdateRepoName & "/releases", "检查更新")
+                Return
+            End If
+            '确认更新
+            If MyMsgBox("发现新版本：" & TagName & vbCrLf & vbCrLf & "是否立即下载并更新？" & vbCrLf & "更新完成后需重启 PCL 生效。", "发现新版本", "更新", "取消") <> 1 Then Return
+            Hint("正在下载更新……")
+            UpdateNewExePath = PathTemp & "PCL-II-Update-" & GetUuid() & ".exe"
+            NetDownloadByLoader(ExeAsset("browser_download_url").ToString(), UpdateNewExePath)
+            '校验下载文件是否为有效程序
+            If Not System.IO.File.Exists(UpdateNewExePath) Then Throw New Exception("下载失败：文件不存在")
+            If New System.IO.FileInfo(UpdateNewExePath).Length < 1024 * 1024 Then Throw New Exception("下载失败：文件大小异常")
+            Dim Header(1) As Byte
+            Using fs = System.IO.File.OpenRead(UpdateNewExePath)
+                fs.Read(Header, 0, 2)
+            End Using
+            If Header(0) <> Asc("M"c) OrElse Header(1) <> Asc("Z"c) Then Throw New Exception("下载失败：文件格式不正确")
+            '提示重启完成更新
+            If MyMsgBox("新版本 " & TagName & " 已下载完成。" & vbCrLf & "重启 PCL 后将自动完成更新，立即重启吗？", "更新完成", "立即重启", "稍后") = 1 Then
+                UpdateRestart(True)
+            Else
+                IsUpdateWaitingRestart = True '稍后更新：退出 PCL 时自动完成
+                Hint("更新将在退出 PCL 时自动完成。")
+            End If
+        Catch ex As Exception
+            ex.ThrowIfCanceled()
+            MyMsgBox("检查更新失败：" & ex.Message & vbCrLf & vbCrLf & "请检查网络连接后重试，或到 GitHub Releases 页面手动下载。", "检查更新")
+        End Try
     End Sub
 
-    Friend IsUpdateWaitingRestart As Boolean = False
     Public Sub UpdateRestart(TriggerRestartAndByEnd As Boolean)
+        'PCL-II 分支：exe 正在运行无法直接覆盖，通过延迟替换脚本（cmd 独立进程）完成更新
+        If UpdateNewExePath = "" OrElse Not System.IO.File.Exists(UpdateNewExePath) Then Return
+        Dim OldExePath = PathExe
+        If PathUtils.IsSame(UpdateNewExePath, OldExePath) Then Return
+        Dim BatPath = PathTemp & "PCL-II-Update.bat"
+        Dim OldEscaped = OldExePath.Replace("%", "%%")
+        Dim NewEscaped = UpdateNewExePath.Replace("%", "%%")
+        Dim BatContent = "@echo off" & vbCrLf &
+            "setlocal EnableDelayedExpansion" & vbCrLf &
+            "set /a n=0" & vbCrLf &
+            ":retry" & vbCrLf &
+            "ping 127.0.0.1 -n 2 >nul" & vbCrLf &
+            "del /f /q """ & OldEscaped & """ 2>nul" & vbCrLf &
+            "if not exist """ & OldEscaped & """ goto replace" & vbCrLf &
+            "set /a n+=1" & vbCrLf &
+            "if !n! lss 30 goto retry" & vbCrLf &
+            "goto giveup" & vbCrLf &
+            ":replace" & vbCrLf &
+            "move /y """ & NewEscaped & """ """ & OldEscaped & """ >nul 2>&1" & vbCrLf &
+            "if errorlevel 1 goto giveup" & vbCrLf &
+            "start """"" & OldEscaped & """" & vbCrLf &
+            ":giveup" & vbCrLf &
+            "del /f /q ""%~f0"" >nul 2>&1" & vbCrLf
+        System.IO.File.WriteAllText(BatPath, BatContent)
+        Try
+            System.Diagnostics.Process.Start(New System.Diagnostics.ProcessStartInfo("cmd.exe", "/c call """ & BatPath & """") With {
+                .WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden,
+                .CreateNoWindow = True,
+                .UseShellExecute = False
+            })
+        Catch ex As Exception
+            Logger.Warn(ex, "启动更新脚本失败")
+            MyMsgBox("自动更新失败，请到 GitHub Releases 页面手动下载：https://github.com/" & UpdateRepoOwner & "/" & UpdateRepoName & "/releases", "更新失败")
+            Return
+        End Try
+        Environment.Exit(0)
     End Sub
+
     Public Sub UpdateReplace(ProcessId As Integer, OldFileName As String, NewFileName As String, TriggerRestart As Boolean)
+        'PCL-II 分支：兼容 --update 命令行调用（等待旧进程退出后替换文件）
+        Try
+            If ProcessId <> 0 Then
+                Try
+                    Dim OldProcess = System.Diagnostics.Process.GetProcessById(ProcessId)
+                    OldProcess.WaitForExit()
+                Catch ex As Exception
+                End Try
+            End If
+            Try
+                System.IO.File.Replace(NewFileName, OldFileName, Nothing, True)
+            Catch ex As Exception
+                System.IO.File.Delete(OldFileName)
+                System.IO.File.Move(NewFileName, OldFileName)
+            End Try
+            If TriggerRestart AndAlso System.IO.File.Exists(OldFileName) Then
+                System.Diagnostics.Process.Start(OldFileName)
+            End If
+        Catch ex As Exception
+            Logger.Warn(ex, "命令行更新替换失败")
+        End Try
+        Environment.Exit(0)
     End Sub
 
     ''' <summary>
