@@ -9,9 +9,10 @@ Public Class Application
             '核心初始化
             MeloongCore.Main.Init("PCL")
             MeloongCore.Wpf.Main.Init()
-            'PCL-II 分支：读取功能模式（默认模式 / 便携模式），便携模式下所有数据保存在程序目录
+            'PCL-II 分支：读取功能模式（默认模式 / 便携模式），便携模式下所有数据保存在程序目录；
+            '模式开关优先读程序目录便携文件（U 盘携带），否则读注册表
             Try
-                Paths.PortableMode = Settings.Get(Of Integer)("SystemPortableMode") = 1
+                Paths.PortableMode = Settings.GetPortableModeFlag() = 1
             Catch ex As Exception
                 Logger.Warn(ex, "读取功能模式设置失败")
             End Try
