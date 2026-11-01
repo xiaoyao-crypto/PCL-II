@@ -7,7 +7,8 @@ Friend Module ModSecret
     '在开源版的注册表与常规版的注册表隔离，以防数据冲突
     Public Const RegFolder As String = "PCLDebug"
     '用于微软登录的 ClientId
-    Public OAuthClientId As String = If(Environment.GetEnvironmentVariable("PCL_MS_CLIENT_ID"), "")
+    'PCL-II 分支：内置公开的微软登录 Client ID（来源：PCL 官方社区版 PCL-CE v2.15.1 发行版内置值，已通过微软设备码端点验证可用），保证正版登录开箱即用；环境变量 PCL_MS_CLIENT_ID 可覆盖
+    Public OAuthClientId As String = If(Environment.GetEnvironmentVariable("PCL_MS_CLIENT_ID"), "c14b0370-8d75-42f8-b329-5b60d39e319f")
     'CurseForge API Key
     Public CurseForgeAPIKey As String = If(Environment.GetEnvironmentVariable("PCL_CURSEFORGE_API_KEY"), "")
     '用于匿名数据收集的腾讯云日志服务上报 URL，形如 https://{region}.cls.tencentcs.com/track?topic_id={topic_id}
