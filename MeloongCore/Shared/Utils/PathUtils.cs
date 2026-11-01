@@ -284,11 +284,19 @@ public static class Paths {
     /// </summary>
     public static string BaseThenName => PathUtils.AddSlashSuffix(Base + Main.AppName);
     /// <summary>
+    /// 是否启用便携模式（PCL-II 分支扩展）。
+    /// 便携模式下，PCL 的数据（皮肤、缓存等）均保存在可执行文件所在目录，不写入 %AppData%。
+    /// </summary>
+    public static bool PortableMode { get; set; } = false;
+    /// <summary>
     /// %AppData% 文件夹。
     /// </summary>
     public static string AppData => PathUtils.AddSlashSuffix(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData));
     /// <summary>
     /// %AppData% 文件夹中，名为 <see cref="Main.AppName"/> 的子文件夹。
+    /// 便携模式下返回程序目录中的 PCL\Data 文件夹。
     /// </summary>
-    public static string AppDataThenName => PathUtils.AddSlashSuffix(AppData + Main.AppName);
+    public static string AppDataThenName => PortableMode
+        ? PathUtils.AddSlashSuffix(Base + "PCL\\Data")
+        : PathUtils.AddSlashSuffix(AppData + Main.AppName);
 }
