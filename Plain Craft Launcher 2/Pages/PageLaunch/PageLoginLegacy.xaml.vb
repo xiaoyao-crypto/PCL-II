@@ -61,6 +61,20 @@ Public Class PageLoginLegacy
             If Index = ComboName.Text.Length OrElse Index = 0 Then e.Handled = True
         End If
     End Sub
+    'PCL-II 分支：输入用户名后（输入框失焦时）即保存到账号列表，避免未点击启动导致用户名丢失
+    Private Sub ComboName_LostFocus(sender As Object, e As RoutedEventArgs) Handles ComboName.LostFocus
+        Try
+            Dim Name As String = ComboName.Text.Replace("¨", "").Trim
+            If Name = "" Then Return
+            Dim Names As New List(Of String)
+            If Not Settings.Get(Of String)("LoginLegacyName") = "" Then Names.AddRange(Settings.Get(Of String)("LoginLegacyName").ToString.Split("¨"))
+            Names.Remove(Name)
+            Names.Insert(0, Name)
+            Settings.Set("LoginLegacyName", Names.Join("¨"c))
+        Catch ex As Exception
+            Logger.Warn(ex, "保存离线用户名失败")
+        End Try
+    End Sub
     Private Sub ComboLegacy_TextChanged(sender As Object, e As TextChangedEventArgs) Handles ComboName.TextChanged
         If Settings.Get(Of Integer)("LaunchSkinType") = 0 Then PageLaunchLeft.SkinLegacy.Start(IsForceRestart:=True)
         HintChinese.Visibility = If(ComboName.Text.RegexCheck("^[0-9A-Za-z_]*$"), Visibility.Collapsed, Visibility.Visible)
