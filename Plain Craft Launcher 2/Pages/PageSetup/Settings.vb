@@ -29,6 +29,7 @@ Public Class Settings
         New Setting("SystemHighestSavedBetaVersionReg", 0, Source:=Sources.Registry, Encrypted:=True),
         New Setting("SystemHighestBetaVersionReg", 0, Source:=Sources.Registry, Encrypted:=True),
         New Setting("SystemHighestAlphaVersionReg", 0, Source:=Sources.Registry, Encrypted:=True),
+        New Setting("SystemOpenSourceHintShown", False, Source:=Sources.Registry, Encrypted:=True), 'PCL-II 分支：开源版本说明弹窗是否已显示（仅首次启动显示）
         New Setting("SystemHelpVersion", 0, Source:=Sources.Registry),
         New Setting("SystemDebugMode", False, Source:=Sources.Registry, OnChanged:=Sub() Logger.Instance.MinLevel = If(ModeDebug, LogLevel.Trace, LogLevel.Info)),
         New Setting("SystemDebugAnim", 9, Source:=Sources.Registry),
