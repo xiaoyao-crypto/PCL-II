@@ -135,13 +135,39 @@ Friend Module ModSecret
             FrmMain.PanForm.Background.Freeze()
         End Sub)
     End Sub
+    'PCL-II 分支：解锁全部隐藏主题与自定义配色（含正版登录、反馈等成就式解锁）
     Friend Sub ThemeCheckAll(EffectSetup As Boolean)
+        If FrmSetupUI Is Nothing Then Return
+        Dim Unlock = Sub()
+            With FrmSetupUI
+                .RadioLauncherTheme5.IsEnabled = True
+                .RadioLauncherTheme5Gray.Opacity = 0
+                .RadioLauncherTheme5.Opacity = 1
+                .RadioLauncherTheme6.IsEnabled = True
+                .RadioLauncherTheme7.IsEnabled = True
+                .RadioLauncherTheme8.IsEnabled = True
+                .RadioLauncherTheme9.IsEnabled = True
+                .RadioLauncherTheme10.IsEnabled = True
+                .RadioLauncherTheme11.IsEnabled = True
+                .RadioLauncherTheme12.IsEnabled = True
+                .RadioLauncherTheme13.IsEnabled = True
+                .RadioLauncherTheme14.IsEnabled = True
+                .PanLauncherHide.Visibility = Visibility.Collapsed
+            End With
+        End Sub
+        If RunInUi() Then
+            Unlock()
+        Else
+            Application.Current.Dispatcher.Invoke(Unlock)
+        End If
     End Sub
     Friend Function ThemeCheckOne(Id As Integer) As Boolean
         Return True
     End Function
     Friend Function ThemeUnlock(Id As Integer, Optional ShowDoubleHint As Boolean = True, Optional UnlockHint As String = Nothing) As Boolean
-        Return False
+        'PCL-II 分支：全部主题已解锁；若调用方要求且提供了提示文本则弹出解锁提示
+        If ShowDoubleHint AndAlso Not String.IsNullOrEmpty(UnlockHint) Then MyMsgBox(UnlockHint, "提示")
+        Return True
     End Function
 
 #End Region
